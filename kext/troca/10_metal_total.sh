@@ -28,7 +28,9 @@ UH=$(eval echo "~$U")
 CD=/Library/Preferences/com.apple.CoreDisplay
 D=$(cd "$(dirname "$0")" && pwd)
 GB=/Library/GPUBundles
-L="$UH/maxwell_metal/logs/metal_total"
+BASE=$(cd "$D/../.." && pwd)
+LOGS=${GREENMETAL_LOGS:-$BASE/logs}
+L="$LOGS/metal_total"
 ESPERA=${ESPERA:-45}
 
 wspid() { pgrep -x WindowServer | head -1; }
@@ -126,7 +128,7 @@ script -q -F "$L/ws.log" /usr/bin/log stream --level debug --style compact --pre
 LS1=$!
 script -q -F "$L/kern.log" /usr/bin/log stream --level debug --style compact --predicate 'process == "kernel" AND (eventMessage CONTAINS[c] "nvaccel" OR eventMessage CONTAINS[c] "maxwell" OR eventMessage CONTAINS[c] "nvrmfb" OR eventMessage CONTAINS[c] "agdc" OR eventMessage CONTAINS "iop:" OR eventMessage CONTAINS[c] "IOPresentment" OR eventMessage CONTAINS[c] "NVMTL")' </dev/null >/dev/null 2>&1 &
 LS2=$!
-fim_logs() { pkill -P $LS1 2>/dev/null; pkill -P $LS2 2>/dev/null; kill $LS1 $LS2 2>/dev/null; chown -R "$U" "$UH/maxwell_metal/logs" 2>/dev/null; sync; }
+fim_logs() { pkill -P $LS1 2>/dev/null; pkill -P $LS2 2>/dev/null; kill $LS1 $LS2 2>/dev/null; chown -R "$U" "$LOGS" 2>/dev/null; sync; }
 T0=$(date '+%F %T')
 sleep 2
 
@@ -150,7 +152,7 @@ say "== reiniciando o WindowServer (Metal + IOPresentment)"
 sync
 if ! reinicia_ws 25; then
   say "== RESULTADO: NAO FOI (o WindowServer novo nao apareceu em 25 s)"
-  fim_logs; volta | tee -a "$R"; chown -R "$U" "$UH/maxwell_metal/logs" 2>/dev/null
+  fim_logs; volta | tee -a "$R"; chown -R "$U" "$LOGS" 2>/dev/null
   exit 2
 fi
 sleep 3
@@ -191,7 +193,7 @@ if [ $QUEDAS -ge 2 ] || [ -z "$(wspid)" ] || [ "$OK1" = "$OK0" ] || [ "$NZ" = 0 
   say "== RESULTADO: NAO FOI (quedas $QUEDAS, quadros no pipe $OK0 -> $OK1, ultimo quadro com $NZ/64 amostras nao pretas)"
   fim_logs
   volta | tee -a "$R"
-  chown -R "$U" "$UH/maxwell_metal/logs" 2>/dev/null
+  chown -R "$U" "$LOGS" 2>/dev/null
   echo "Registro em $L."
   exit 2
 fi
@@ -214,7 +216,7 @@ confere_flip() {
     sysctl -w debug.nvaccel_iop_flip=0 >/dev/null 2>&1
     fim_logs
     volta | tee -a "$R"
-    chown -R "$U" "$UH/maxwell_metal/logs" 2>/dev/null
+    chown -R "$U" "$LOGS" 2>/dev/null
     echo "Registro em $L."
     exit 3
   fi
@@ -232,4 +234,4 @@ if [ "${PERFIL:-0}" = 1 ]; then
 fi
 fim_logs
 echo "Olhe o monitor. Se a area de trabalho estiver certa, deixe assim."
-echo "Se estiver preta ou errada:  sudo ~/maxwell_metal/kext/troca/10_metal_total.sh volta"
+echo "Se estiver preta ou errada:  sudo $D/10_metal_total.sh volta"

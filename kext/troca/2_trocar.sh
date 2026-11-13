@@ -54,5 +54,5 @@ kmutil inspect -a x86_64 -A "$KC" 2>/dev/null | grep -q local.maxwell.MaxwellAcc
 
 echo
 echo "PRONTO. Antes de reiniciar, no config.plist do OpenCore acrescente aos boot-args:  nvaccel=1 nvaccelarm=1"
-echo "Depois do boot (ou por ssh se a tela ficar preta):  ~/maxwell_metal/kext/troca/3_conferir.sh"
-echo "Volta:  sudo ~/maxwell_metal/kext/troca/9_voltar.sh   (ou o clone)"
+echo "Depois do boot (ou por ssh se a tela ficar preta):  $D/3_conferir.sh"
+echo "Volta:  sudo $D/9_voltar.sh   (ou o clone)"

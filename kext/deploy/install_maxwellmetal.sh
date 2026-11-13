@@ -65,5 +65,5 @@ cp "$T/aux.kc" "$KC.new" && chown root:wheel "$KC.new" && chmod 744 "$KC.new" &&
 ids "$KC" | grep -q '^local.maxwell.MaxwellMetal$' || die "colecao publicada sem o kext?! restaure com o uninstall"
 rm -rf "$T"
 echo
-echo "PRONTO. Reinicie. Depois do boot, no hackintosh:  ~/maxwell_metal/kext/deploy/pos_boot.sh"
+echo "PRONTO. Reinicie. Depois do boot, no hackintosh:  $D/pos_boot.sh"
 echo "Problema no boot: boot-arg -mmeoff, ou sudo ./uninstall_maxwellmetal.sh, ou Recovery (RECUPERACAO.txt)."

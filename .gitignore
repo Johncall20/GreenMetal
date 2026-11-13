@@ -66,6 +66,8 @@
 !*.yml
 !Makefile
 !/.github/CODEOWNERS
+!/greenmetal
+!/VERSION
 
 # 4) o que continua fora mesmo com a extensao liberada
 /CLAUDE.md

@@ -1,0 +1,307 @@
+#!/bin/bash
+# greenmetal: one front end for the GreenMetal install scripts.
+#
+# It does not reimplement them. Each command checks the machine, then runs the same script the author runs by hand
+# (kext/deploy, kext/troca, kext/gpubundles). Those scripts print in Portuguese:
+#   PARADA = stopped, nothing further was done        PRONTO = finished
+#
+# Commands that need no root:  check  status  dry-run  version
+# Everything else needs sudo and changes what the Mac boots from. Read docs/INSTALL.md first.
+set -u
+ROOT=$(cd "$(dirname "$0")" && pwd)
+VERSION=$(cat "$ROOT/VERSION" 2>/dev/null || echo dev)
+DEPLOY=$ROOT/kext/deploy; TROCA=$ROOT/kext/troca; GPUB=$ROOT/kext/gpubundles
+KC=/Library/KernelCollections/AuxiliaryKernelExtensions.kc
+GB=/Library/GPUBundles
+FORCE=0; YES=0
+
+say()  { printf '%s\n' "$*"; }
+die()  { printf 'greenmetal: %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+GreenMetal $VERSION  -  experimental Metal for NVIDIA Maxwell on macOS 26
+
+  ./greenmetal check          read-only look at this machine (no root)
+  ./greenmetal status         what is installed, loaded and armed (no root)
+  ./greenmetal dry-run        build the new kernel collection in a temporary file and compare; changes nothing (no root)
+
+  sudo ./greenmetal install        stage one: Metal for apps. Keeps your current desktop.
+  sudo ./greenmetal switch         stage two: replace NVIDIA's accelerator. Can leave you without a picture.
+  sudo ./greenmetal update         reinstall the kexts and the Metal stack from this folder
+  sudo ./greenmetal update-stack   reinstall only the Metal plugin and NVK (no reboot)
+  sudo ./greenmetal desktop on     move WindowServer to Metal until the next boot
+  sudo ./greenmetal desktop off    back to the CPU-composited desktop
+  sudo ./greenmetal revert         undo stage two (works over ssh with a black screen)
+  sudo ./greenmetal uninstall      undo stage one
+
+Options:  --force  run on a card other than the GTX 960 (10de:1401)      --yes  do not ask for confirmation
+
+Keep this folder. The rollback data is stored inside it.
+EOF
+}
+
+# ---- facts about this machine -------------------------------------------------------------------------------------
+nvidia_ids() {   # device ids (hex, lower case) of NVIDIA display controllers
+  ioreg -r -c IOPCIDevice -d 1 -l -w0 2>/dev/null | awk '
+    function flush() { if (ven == "de10" && substr(cls, 1, 2) == "03") print dev; ven = dev = cls = "" }
+    /\+-o /            { flush() }
+    /"vendor-id" = </  { v = $0; sub(/.*</, "", v); ven = substr(v, 1, 4) }
+    /"device-id" = </  { v = $0; sub(/.*</, "", v); dev = substr(v, 3, 2) substr(v, 1, 2) }
+    /"class-code" = </ { v = $0; sub(/.*</, "", v); cls = substr(v, 5, 2) substr(v, 3, 2) }
+    END                { flush() }'
+}
+kc_ids()   { kmutil inspect -a x86_64 -A "$1" 2>/dev/null | awk -F'\t' 'NF>=3 && $1 ~ /\./ && $1 !~ / / {print $1}' | sort -u; }
+kc_rows()  { kmutil inspect -a x86_64 -A "$1" 2>/dev/null | awk -F'\t' 'NF>=3 && $1 ~ /\./ && $1 !~ / / {print $1 "\t" $2 "\t" $3}'; }
+plist_ver(){ /usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$1/Contents/Info.plist" 2>/dev/null; }
+
+# fresh    = Web Driver with NVIDIA's accelerator, no GreenMetal kext yet
+# apps     = stage one done (MaxwellMetal next to NVIDIA's accelerator)
+# switched = stage two done (MaxwellAccel instead of NVIDIA's accelerator)
+state() {
+  local ids; ids=$(kc_ids "$KC")
+  if   printf '%s\n' "$ids" | grep -qx local.maxwell.MaxwellAccel;   then echo switched
+  elif printf '%s\n' "$ids" | grep -qx local.maxwell.MaxwellMetal;   then echo apps
+  elif printf '%s\n' "$ids" | grep -qx com.nvidia.web.NVDAResmanWeb; then echo fresh
+  else echo none; fi
+}
+
+# ---- guards -------------------------------------------------------------------------------------------------------
+PAYLOAD_KEXTS="kext/deploy/MaxwellMetal.kext kext/troca/MaxwellAccel.kext kext/troca/MaxwellAGDC.kext kext/troca/MaxwellFB.kext"
+PAYLOAD_CODE="kext/gpubundles/NVMTLDriver.bundle kext/gpubundles/nvmtl/libvulkan_nouveau.dylib kext/gpubundles/nvmtl/libnvmtl_translate.dylib"
+
+need_payload() {
+  local f bin
+  for f in $PAYLOAD_KEXTS; do
+    bin=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$ROOT/$f/Contents/Info.plist" 2>/dev/null)
+    [ -n "$bin" ] && [ -f "$ROOT/$f/Contents/MacOS/$bin" ] || die "missing or incomplete: $f. This command needs the release archive, not a bare git checkout (see docs/INSTALL.md)."
+  done
+  [ -f "$GPUB/NVMTLDriver.bundle/Contents/MacOS/air-runtime/libLLVM.dylib" ] || die "missing: the shader runtime inside NVMTLDriver.bundle"
+  for f in $PAYLOAD_CODE; do
+    [ -e "$ROOT/$f" ] || die "missing: $f"
+    codesign -v "$ROOT/$f" 2>/dev/null || die "bad code signature: $f (was the archive unpacked with something that changes files?)"
+  done
+}
+need_root() { [ "$(id -u)" -eq 0 ] || die "this command needs root: sudo ./greenmetal $*"; }
+need_macos() {
+  [ "$(uname -m)" = x86_64 ] || die "x86_64 only"
+  case "$(sw_vers -productVersion 2>/dev/null)" in 26.*) ;; *) [ $FORCE = 1 ] || die "only macOS 26 has been tried (--force to go on anyway)";; esac
+}
+need_card() {
+  local ids; ids=$(nvidia_ids | tr '\n' ' ')
+  [ -n "$ids" ] || die "no NVIDIA display device found"
+  case " $ids " in *" 1401 "*) return 0;; esac
+  [ $FORCE = 1 ] || die "this card (10de:${ids% }) is not the GTX 960 the project was tested on. Run ./greenmetal check, read issue #1, and use --force if you accept that."
+  say "!! running on an untested card (10de:${ids% }) because of --force"
+}
+need_place() {
+  case "$ROOT" in /tmp/*|/private/tmp/*|/private/var/*|/var/folders/*|/Volumes/*)
+    die "this folder ($ROOT) is not a permanent place. Move it somewhere that stays (for example ~/GreenMetal): the rollback data is kept inside it.";; esac
+}
+need_way_back() {
+  nc -z -w1 127.0.0.1 22 >/dev/null 2>&1 || { [ $FORCE = 1 ] || die "Remote Login (ssh) is off. Turn it on first: it is the way back from a black screen (--force to skip)."; }
+}
+confirm() {   # confirm WORD "what is about to happen"
+  [ $YES = 1 ] && return 0
+  say ""; say "$2"
+  local a; read -r -p "Type $1 to continue: " a
+  [ "$a" = "$1" ] || die "cancelled"
+}
+unquarantine() { xattr -dr com.apple.quarantine "$ROOT" 2>/dev/null; return 0; }
+run() { say ""; say "-- $*"; "$@"; }
+
+# ---- commands that change nothing ---------------------------------------------------------------------------------
+cmd_status() {
+  local st loaded k; st=$(state)
+  say "GreenMetal $VERSION in $ROOT"
+  case $st in
+    fresh)    say "state: Web Driver present, GreenMetal not installed";;
+    apps)     say "state: stage one (Metal for apps; NVIDIA's accelerator still drives the desktop)";;
+    switched) say "state: stage two (MaxwellAccel drives the desktop)";;
+    *)        say "state: no Web Driver resource manager in the auxiliary kernel collection";;
+  esac
+  loaded=$(kmutil showloaded --list-only 2>/dev/null | awk '{print $6, $7}')
+  say ""; say "kext              this folder   /Library/Extensions   loaded"
+  for k in MaxwellMetal MaxwellAccel MaxwellAGDC MaxwellFB; do
+    local here inst ld p
+    case $k in MaxwellMetal) p=$DEPLOY;; *) p=$TROCA;; esac
+    here=$(plist_ver "$p/$k.kext"); inst=$(plist_ver "/Library/Extensions/$k.kext")
+    ld=$(printf '%s\n' "$loaded" | awk -v id="local.maxwell.$k" '$1 == id {gsub(/[()]/, "", $2); print $2}')
+    printf '%-17s %-13s %-21s %s\n' "$k" "${here:--}" "${inst:--}" "${ld:--}"
+  done
+  say ""
+  if [ -d "$GB/NVMTLDriver.bundle" ]; then
+    for k in NVMTLDriver.bundle/Contents/MacOS/NVMTLDriver nvmtl/libvulkan_nouveau.dylib nvmtl/libnvmtl_translate.dylib; do
+      if [ -f "$GPUB/$k" ] && cmp -s "$GPUB/$k" "$GB/$k"; then say "stack: $k  same as this folder"
+      elif [ -f "$GB/$k" ]; then say "stack: $k  installed, differs from this folder"
+      else say "stack: $k  not installed"; fi
+    done
+  else say "stack: nothing in $GB"; fi
+  say ""
+  local v
+  v=$(sysctl -n debug.maxwell_metal 2>/dev/null) && say "debug.maxwell_metal = $v   (stage one: 1 = Metal plugin armed)"
+  v=$(sysctl -n debug.nvaccelfb 2>/dev/null)     && say "debug.nvaccelfb     = $v   (stage two: 1 = accelerator armed)"
+  v=$(sysctl -n debug.nvaccel_iop 2>/dev/null)   && say "debug.nvaccel_iop   = $v   (1 = WindowServer presenting through the accelerator)"
+  say "boot-args: $(nvram boot-args 2>/dev/null | cut -f2-)"
+}
+
+# Builds the collection the next install/update would publish, into a temporary file, and compares it with the
+# current one. Proves that the kexts in this folder link against this system. Publishes nothing.
+cmd_dry_run() {
+  need_macos; need_payload
+  local st T rc id ver path new old KARG P
+  st=$(state)
+  [ $st != none ] || die "no Web Driver resource manager in the current collection; nothing to build on"
+  T=$(mktemp -d /tmp/greenmetal-dry.XXXXXX)
+  P=()
+  while IFS=$'\t' read -r id ver path; do
+    case "$id" in
+      local.maxwell.MaxwellMetal) continue;;
+      local.maxwell.MaxwellAccel|local.maxwell.MaxwellAGDC|local.maxwell.MaxwellFB) continue;;
+    esac
+    [ -d "$path" ] || { rm -rf "$T"; die "a kext of the current collection is gone from disk: $id ($path)"; }
+    P+=(-p "$path")
+  done < <(kc_rows "$KC")
+  P+=(-p "$DEPLOY/MaxwellMetal.kext")
+  if [ $st = switched ]; then P+=(-p "$TROCA/MaxwellAccel.kext" -p "$TROCA/MaxwellAGDC.kext" -p "$TROCA/MaxwellFB.kext"); fi
+  say "state: $st. Building a trial collection with the kexts from this folder (about a minute)..."
+  [ $st = switched ] || say "(this is the stage-one collection; the stage-two one needs root to read the sealed snapshot and is not tried here)"
+  KARG=(--allow-missing-kdk); [ -f /System/Library/Kernels/kernel ] && KARG+=(--kernel /System/Library/Kernels/kernel)
+  kmutil create -n aux --volume-root / "${KARG[@]}" -B /System/Library/KernelCollections/BootKernelExtensions.kc \
+    -S /System/Library/KernelCollections/SystemKernelExtensions.kc "${P[@]}" -x -A "$T/aux.kc" -z > "$T/kmutil.log" 2>&1
+  rc=$?
+  if [ $rc -ne 0 ] || [ ! -s "$T/aux.kc" ]; then
+    grep -v '^No variant' "$T/kmutil.log" | tail -25
+    rm -rf "$T"; die "kmutil could not build the collection (rc $rc). Do NOT install on this machine as it is."
+  fi
+  kc_rows "$T/aux.kc" | cut -f1,2 | sort > "$T/new.txt"; kc_rows "$KC" | cut -f1,2 | sort > "$T/old.txt"
+  say ""; say "trial collection: $(grep -c . "$T/new.txt") kexts"
+  sed 's/^/   /' "$T/new.txt" | tr '\t' ' '
+  old=$(comm -23 "$T/old.txt" "$T/new.txt"); new=$(comm -13 "$T/old.txt" "$T/new.txt")
+  say ""
+  if [ -z "$old$new" ]; then say "same kexts and versions as the collection in use."
+  else
+    [ -n "$old" ] && { say "only in the collection in use:"; printf '%s\n' "$old" | sed 's/^/   /' | tr '\t' ' '; }
+    [ -n "$new" ] && { say "only in the trial collection:";  printf '%s\n' "$new" | sed 's/^/   /' | tr '\t' ' '; }
+  fi
+  rm -rf "$T"
+  say ""; say "dry run ok: the kexts in this folder link against this system. Nothing was changed."
+}
+
+# ---- commands that change the machine -----------------------------------------------------------------------------
+cmd_install() {
+  need_root install; need_macos; need_card; need_payload; need_place; need_way_back; unquarantine
+  case $(state) in
+    fresh|apps) ;;
+    switched) die "stage two is already in place here. Use: sudo ./greenmetal update";;
+    *) die "the NVIDIA Web Driver resource manager (NVDAResmanWeb) is not in the auxiliary kernel collection. GreenMetal needs it.";;
+  esac
+  confirm INSTALL "Stage one: adds MaxwellMetal.kext to the auxiliary kernel collection and installs the Metal stack in $GB.
+The current collection is kept next to the live one (.maxwell-backup, .maxwell-prev)."
+  mkdir -p "$GB" && chown root:wheel "$GB" && chmod 755 "$GB" || die "could not create $GB"
+  run "$DEPLOY/install_maxwellmetal.sh" || die "the install script stopped (see above). Nothing was published unless it printed PRONTO."
+  [ -f "$GB/nvmtl-allow.txt" ] || run "$DEPLOY/allowlist_install.sh"
+  cat <<EOF
+
+Stage one is installed. Next:
+  1. reboot
+  2. $DEPLOY/pos_boot.sh          (arms the plugin and runs a Metal probe as your user)
+If the machine does not come up: boot-arg -mmeoff, or over ssh:  sudo $ROOT/greenmetal uninstall
+EOF
+}
+
+cmd_switch() {
+  need_root switch; need_macos; need_card; need_payload; need_place; need_way_back; unquarantine
+  case $(state) in
+    apps) ;;
+    fresh) die "run stage one first (sudo ./greenmetal install), reboot, and confirm it works";;
+    switched) die "stage two is already in place here";;
+    *) die "no Web Driver resource manager in the auxiliary kernel collection";;
+  esac
+  confirm SWITCH "Stage two removes OpenCore Legacy Patcher's non-Metal patches and NVIDIA's accelerator.
+If MaxwellAccel does not come up on this machine, the screen stays black until you run 'revert' over ssh.
+You need: a system clone that boots, a backup EFI, and ssh from another computer."
+  run "$TROCA/1_preparar.sh" || die "preparation stopped (see above). Nothing the next boot uses was changed."
+  run "$TROCA/2_trocar.sh"   || die "the switch stopped (see above). If it got past 'bless', run: sudo $ROOT/greenmetal revert"
+  cat <<EOF
+
+Stage two is in place. BEFORE you reboot, add to boot-args in your OpenCore config.plist:
+    nvaccel=1 nvaccelarm=1
+After the reboot (over ssh if the screen is black):
+    $TROCA/3_conferir.sh
+    sudo $ROOT/greenmetal update        (adds the framebuffer and the display kext; then reboot once more)
+Way back, also over ssh:
+    sudo $ROOT/greenmetal revert
+EOF
+}
+
+cmd_update() {
+  need_root update; need_macos; need_card; need_payload; need_place; unquarantine
+  case $(state) in
+    switched) confirm UPDATE "Reinstalls MaxwellAccel, MaxwellAGDC, MaxwellFB, MaxwellMetal and the Metal stack from this folder, and rebuilds the auxiliary kernel collection."
+              run "$TROCA/atualizar_accel.sh" || die "the update stopped (see above)";;
+    apps)     confirm UPDATE "Reinstalls MaxwellMetal and the Metal stack from this folder, and rebuilds the auxiliary kernel collection."
+              run "$DEPLOY/install_maxwellmetal.sh" || die "the update stopped (see above)";;
+    *)        die "nothing to update here. Start with: sudo ./greenmetal install";;
+  esac
+  say ""; say "Check the date of the collection before you reboot:"; ls -la "$KC"
+  say "If it is not from just now, the collection was not rebuilt: do not assume the update happened."
+}
+
+cmd_update_stack() {
+  need_root update-stack; need_payload; unquarantine
+  [ -d "$GB" ] || die "$GB does not exist. Start with: sudo ./greenmetal install"
+  run "$GPUB/install_gpubundles.sh" || die "stopped (see above)"
+  say ""; say "Apps opened from now on use the new stack. No reboot needed."
+}
+
+cmd_desktop() {
+  need_root desktop
+  [ "$(state)" = switched ] || die "the Metal desktop needs stage two (sudo ./greenmetal switch)"
+  case "${1:-}" in
+    on)  confirm DESKTOP "Restarts WindowServer on Metal with zero-copy flips. You land on the login screen. It goes back by itself if the flip counters look wrong."
+         run env SURFSHARE="${SURFSHARE:-3}" FLIP="${FLIP:-1}" PERFIL="${PERFIL:-0}" "$TROCA/10_metal_total.sh";;
+    off) run "$TROCA/10_metal_total.sh" volta;;
+    *)   die "usage: sudo ./greenmetal desktop on|off";;
+  esac
+}
+
+cmd_revert() {
+  need_root revert
+  [ "$(state)" = switched ] || die "stage two is not in place; nothing to revert"
+  confirm REVERT "Puts back the collection from before stage two, OpenCore Legacy Patcher's auto-patch and its system patches."
+  run "$TROCA/9_voltar.sh" || die "revert stopped (see above)"
+}
+
+cmd_uninstall() {
+  need_root uninstall
+  case $(state) in
+    apps) ;;
+    switched) die "stage two is in place. Run 'sudo ./greenmetal revert' and reboot first.";;
+    *) die "GreenMetal is not installed here";;
+  esac
+  confirm UNINSTALL "Removes MaxwellMetal.kext and the Metal plugin, and restores the collection from before the first install."
+  run "$DEPLOY/uninstall_maxwellmetal.sh"
+}
+
+# ---- main ---------------------------------------------------------------------------------------------------------
+ARGS=()
+for a in "$@"; do
+  case "$a" in --force) FORCE=1;; --yes|-y) YES=1;; *) ARGS+=("$a");; esac
+done
+set -- "${ARGS[@]:-}"
+case "${1:-}" in
+  check)        exec "$ROOT/tools/greenmetal-check.sh";;
+  status)       cmd_status;;
+  dry-run)      cmd_dry_run;;
+  install)      cmd_install;;
+  switch)       cmd_switch;;
+  update)       cmd_update;;
+  update-stack) cmd_update_stack;;
+  desktop)      cmd_desktop "${2:-}";;
+  revert)       cmd_revert;;
+  uninstall)    cmd_uninstall;;
+  version|--version|-v) say "GreenMetal $VERSION";;
+  ""|help|--help|-h) usage;;
+  *) usage; exit 2;;
+esac

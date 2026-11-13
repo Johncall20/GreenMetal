@@ -43,4 +43,4 @@ echo "== 5. patches do OCLP no sistema (alguns minutos)"
 "$OCLP" --patch_sys_vol 2>&1 | tail -25 | sed 's/^/   /'
 echo
 echo "PRONTO. Reinicie (tire nvaccel=1 nvaccelarm=1 dos boot-args, se quiser). Sem aceleracao depois do boot:"
-echo "   sudo ~/maxwell_metal/kext/deploy/install_maxwellmetal.sh   e reiniciar de novo."
+echo "   sudo $D/../deploy/install_maxwellmetal.sh   e reiniciar de novo."
