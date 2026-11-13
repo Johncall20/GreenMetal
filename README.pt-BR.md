@@ -19,7 +19,7 @@ dispositivo Metal funcionando, e a área de trabalho composta por Metal, num sis
 </p>
 
 > [!WARNING]
-> Isto é um projeto de laboratório, não um produto. Não tem instalador. Precisa do SIP parcialmente desligado, carrega
+> Isto é um projeto de laboratório, não um produto. O instalador é alfa e passou por uma máquina só. Precisa do SIP parcialmente desligado, carrega
 > kexts de terceiros, e um erro te deixa numa tela preta ou num kernel panic. Não tente sem um backup da EFI que dê boot
 > e um clone do sistema. **Procuro ajuda**: veja [Onde preciso de ajuda](#onde-preciso-de-ajuda).
 
@@ -142,12 +142,13 @@ Este repositório **não tem nenhum binário da NVIDIA nem da Apple**. Você tra
 
 ## Como compilar e instalar
 
-Comece pela checagem, `tools/greenmetal-check.sh`, que só lê e diz o quanto uma máquina está perto.
+As [releases](../../releases) trazem os kexts e a pilha Metal já compilados, com um comando só, `greenmetal`, na frente
+dos scripts de instalação. Comece pelo `./greenmetal check`, que só lê e diz o quanto uma máquina está perto.
 
 O [`docs/INSTALL.pt-BR.md`](docs/INSTALL.pt-BR.md) mostra o procedimento inteiro como o autor faz: compilar, arrumar os
 binários, instalar, trocar e voltar. Cada kext tem um `build.sh` ao lado dos fontes, o [`nvk/README.md`](nvk/README.md)
-cobre o NVK, e o `metal/build_plugin.sh` compila o plugin Metal. Ainda não existe build único nem instalador. É uma das
-coisas em que preciso de ajuda.
+cobre o NVK, e o `metal/build_plugin.sh` compila o plugin Metal. Ainda não existe build único, e o instalador é alfa: passou por uma
+máquina só. São duas coisas em que preciso de ajuda.
 
 ## Onde preciso de ajuda
 

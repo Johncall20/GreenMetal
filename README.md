@@ -19,7 +19,7 @@ Metal device, and a Metal-composited desktop, on an OS that dropped NVIDIA years
 </p>
 
 > [!WARNING]
-> This is a lab project, not a product. There is no installer. It needs SIP partly disabled, it loads third-party kexts,
+> This is a lab project, not a product. The installer is alpha and has been through one machine. It needs SIP partly disabled, it loads third-party kexts,
 > and a mistake leaves you at a black screen or a kernel panic. Do not try it without a bootable backup of your EFI and
 > a clone of your system. **Help is wanted**: see [Help wanted](#help-wanted).
 
@@ -140,12 +140,13 @@ This repository contains **no NVIDIA or Apple binaries**. You bring your own:
 
 ## Building and installing
 
-Start with the read-only preflight, `tools/greenmetal-check.sh`, which tells you how close a machine is.
+The [releases](../../releases) carry the kexts and the Metal stack prebuilt, with one command, `greenmetal`, in front
+of the install scripts. Start with `./greenmetal check`, which is read-only and tells you how close a machine is.
 
 [`docs/INSTALL.md`](docs/INSTALL.md) walks through the whole procedure as the author does it: build, stage, install, switch
 over and roll back. Each kext has a `build.sh` next to its sources, [`nvk/README.md`](nvk/README.md) covers NVK, and
-`metal/build_plugin.sh` builds the Metal plugin. There is no one-command build or installer yet. That is one of the
-things help is wanted for.
+`metal/build_plugin.sh` builds the Metal plugin. There is no one-command build yet, and the installer is alpha: it
+has been through one machine. Both are things help is wanted for.
 
 ## Help wanted
 

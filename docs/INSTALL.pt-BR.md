@@ -3,8 +3,8 @@
 🇺🇸 [In English](INSTALL.md)
 
 > [!CAUTION]
-> Não existe instalador. Esta página descreve o que o autor faz numa máquina só (GTX 960, macOS 26.7.2), com scripts de
-> laboratório escritos para ela. Todo passo com `sudo` troca parte do que o seu Mac usa para dar boot. Leia cada script
+> O instalador é só uma frente para scripts de laboratório escritos para uma máquina (GTX 960, macOS 26.7.2). Esta
+> página descreve o que eles fazem. Todo passo com `sudo` troca parte do que o seu Mac usa para dar boot. Leia cada script
 > antes de rodar. Se você não está pronto para se recuperar de uma tela preta por `ssh`, pare aqui.
 
 ## Antes de tudo
@@ -22,6 +22,46 @@
    do OpenCore Legacy Patcher e o NVIDIA Web Driver 387.10.10.10.40.140 instalado e dirigindo a tela (`NVDAStartupWeb`,
    `NVDAResmanWeb`, `NVDAGM100HalWeb` e `GeForceWeb` na coleção auxiliar de kexts), com `ngfxgl=1` nos boot-args.
    Chegar nesse estado não é assunto desta página.
+
+## O caminho curto: o pacote da release
+
+Cada [release](../../../releases) traz o `GreenMetal-<versão>.tar.gz` com os quatro kexts e a pilha Metal já
+compilados, e um comando só, `greenmetal`, na frente dos scripts de instalação. Extraia num lugar que vá ficar (os
+dados para a volta são guardados dentro da pasta):
+
+```bash
+tar xzf GreenMetal-0.1.0-alpha.tar.gz -C ~
+```
+
+```bash
+cd ~/GreenMetal-0.1.0-alpha
+```
+
+| Passo | Comando | Root | O que faz |
+|---|---|---|---|
+| 1 | `./greenmetal check` | não | Olha a máquina, só leitura. |
+| 2 | `./greenmetal dry-run` | não | Confere se os kexts resolvem as dependências neste sistema. |
+| 3 | `sudo ./greenmetal dry-run` | sim | Também monta uma coleção de kexts de teste numa pasta temporária. Não publica nada. |
+| 4 | `sudo ./greenmetal install` | sim | Etapa um: Metal para os apps. Depois reinicie e rode `kext/deploy/pos_boot.sh`. |
+| 5 | `sudo ./greenmetal switch` | sim | Etapa dois. Acrescente `nvaccel=1 nvaccelarm=1` aos boot-args e reinicie. |
+| 6 | `sudo ./greenmetal update` | sim | Depois do primeiro boot na etapa dois: põe o framebuffer e o kext de display. Reinicie. |
+| 7 | `sudo ./greenmetal desktop on` | sim | WindowServer em Metal até o próximo boot. `desktop off` volta. |
+
+Caminhos de volta: `sudo ./greenmetal uninstall` (etapa um), `sudo ./greenmetal revert` (etapa dois, funciona por
+`ssh`). O `./greenmetal status` mostra onde a máquina está a qualquer momento.
+
+O `greenmetal` recusa rodar numa placa que não seja a GTX 960 sem `--force`, recusa se o `ssh` estiver desligado, e
+pede para digitar uma palavra antes de cada passo que muda a máquina. Ele não reimplementa os scripts descritos
+abaixo: confere a máquina e roda eles. As mensagens dos scripts estão em português: `PARADA` quer dizer que parou e não
+fez mais nada, `PRONTO` que terminou.
+
+**O que foi e o que não foi testado na 0.1.0-alpha.** Na máquina de referência: `check`, `status`, `dry-run` e os
+próprios binários do pacote (os kexts são idênticos, byte a byte, aos que estão rodando nela; o NVK e o tradutor do
+pacote renderizaram e compilaram shaders na GPU). O `install` e o `switch` rodam os mesmos scripts que colocaram aquela
+máquina de pé, mas a sequência inteira não foi repetida a partir do pacote num sistema limpo. Ninguém rodou nada disso
+em outra placa.
+
+O resto desta página descreve o mesmo procedimento à mão, a partir do código-fonte.
 
 ## O que é instalado
 

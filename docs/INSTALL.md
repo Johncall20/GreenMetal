@@ -3,8 +3,8 @@
 🇧🇷 [Em português](INSTALL.pt-BR.md)
 
 > [!CAUTION]
-> There is no installer. This page describes what the author does on one machine (GTX 960, macOS 26.7.2), using lab
-> scripts written for that machine. Every step that needs `sudo` replaces part of what your Mac boots from. Read each
+> The installer is a thin front end over lab scripts written for one machine (GTX 960, macOS 26.7.2). This page
+> describes what they do. Every step that needs `sudo` replaces part of what your Mac boots from. Read each
 > script before you run it. If you are not ready to recover from a black screen over `ssh`, stop here.
 
 ## Before anything
@@ -22,6 +22,46 @@
    Patcher's non-Metal patches and the NVIDIA Web Driver 387.10.10.10.40.140 installed and driving the screen
    (`NVDAStartupWeb`, `NVDAResmanWeb`, `NVDAGM100HalWeb` and `GeForceWeb` in the auxiliary kernel collection), with
    `ngfxgl=1` in boot-args. Getting to that state is not covered here.
+
+## The short way: the release archive
+
+Each [release](../../../releases) has `GreenMetal-<version>.tar.gz` with the four kexts and the Metal stack already
+built, and one command, `greenmetal`, in front of the install scripts. Unpack it somewhere that stays (the rollback
+data is kept inside the folder):
+
+```bash
+tar xzf GreenMetal-0.1.0-alpha.tar.gz -C ~
+```
+
+```bash
+cd ~/GreenMetal-0.1.0-alpha
+```
+
+| Step | Command | Root | What it does |
+|---|---|---|---|
+| 1 | `./greenmetal check` | no | Read-only look at the machine. |
+| 2 | `./greenmetal dry-run` | no | Checks that the kexts resolve against this system. |
+| 3 | `sudo ./greenmetal dry-run` | yes | Also builds a trial kernel collection in a temporary folder. Publishes nothing. |
+| 4 | `sudo ./greenmetal install` | yes | Stage one: Metal for apps. Then reboot and run `kext/deploy/pos_boot.sh`. |
+| 5 | `sudo ./greenmetal switch` | yes | Stage two. Add `nvaccel=1 nvaccelarm=1` to boot-args, reboot. |
+| 6 | `sudo ./greenmetal update` | yes | After the first boot on stage two: adds the framebuffer and display kexts. Reboot. |
+| 7 | `sudo ./greenmetal desktop on` | yes | WindowServer on Metal until the next boot. `desktop off` goes back. |
+
+Ways back: `sudo ./greenmetal uninstall` (stage one), `sudo ./greenmetal revert` (stage two, works over `ssh`).
+`./greenmetal status` shows where the machine is at any time.
+
+`greenmetal` refuses to run on a card other than the GTX 960 unless you pass `--force`, refuses if `ssh` is off, and
+asks you to type a word before each step that changes the machine. It does not reimplement the scripts described
+below; it checks the machine and then runs them. Their messages are in Portuguese: `PARADA` means it stopped and did
+nothing further, `PRONTO` means it finished.
+
+**What has and has not been tested in 0.1.0-alpha.** On the reference machine: `check`, `status`, `dry-run`, and the
+packaged binaries themselves (the kexts are byte-identical to the ones running there; the packaged NVK and translator
+rendered and compiled shaders on the GPU). `install` and `switch` run the same scripts that brought that machine up,
+but the whole sequence has not been repeated from the archive on a clean system. Nobody has run any of it on another
+card.
+
+The rest of this page describes the same procedure by hand, from source.
 
 ## What gets installed
 
