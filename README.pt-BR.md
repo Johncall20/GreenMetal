@@ -54,7 +54,7 @@ Tudo abaixo foi medido numa máquina só: **GTX 960 2 GB (GM206), Core i3-6100, 
 | Framebuffer próprio e troca de página no canal de display | Funciona |
 | WindowServer compondo por Metal, com flip sem cópia | Funciona quando ligado por script depois do boot; perto de 30 flips/s com vídeo tocando, WindowServer em torno de 45% de um núcleo |
 | Área de trabalho em Metal direto do boot | Ainda não; a máquina sobe na área de trabalho composta pela CPU |
-| Estabilidade por horas | Não provada; a rodada limpa mais longa até agora é de minutos, não de dias |
+| Estabilidade por horas | Uma rodada limpa de 12 horas com vídeo tocando (1,37 milhão de flips, nenhum travado). Ainda não são dias, e ainda não foi repetida |
 | Processos de papel de parede com Metal | Desligado (eles travam num pipeline do VideoToolbox); desenham pela CPU |
 | Decodificação e codificação de vídeo por hardware | Não começou; o resource manager expõe as classes NVDEC e NVENC |
 | Vários monitores, hotplug, dormir e acordar, áudio HDMI | Não testado |

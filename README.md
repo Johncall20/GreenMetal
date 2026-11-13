@@ -54,7 +54,7 @@ display.**
 | Own framebuffer and page flip on the display channel | Works |
 | WindowServer compositing on Metal, zero-copy flips | Works when started by a script after boot; about 30 flips/s with a video playing, WindowServer near 45% of one core |
 | Metal desktop straight from boot | Not yet; the machine boots to the CPU-composited desktop |
-| Stability over hours | Unproven; the longest clean run so far is minutes, not days |
+| Stability over hours | One clean run of 12 hours with a video playing (1.37 million flips, none stalled). Not yet days, and not yet repeated |
 | Wallpaper processes on Metal | Disabled (they spin on a VideoToolbox pipeline); drawn on the CPU |
 | Hardware video decode and encode | Not started; the resource manager does expose the NVDEC and NVENC classes |
 | Multiple displays, hotplug, sleep and wake, HDMI audio | Untested |
