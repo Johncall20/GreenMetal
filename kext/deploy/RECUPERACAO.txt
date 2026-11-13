@@ -1,0 +1,21 @@
+Se o Mac nao subir depois de instalar/atualizar o MaxwellMetal:
+
+1. Primeiro tente subir com o boot-arg -mmeoff (o kext carrega e nao publica nada).
+2. Pelo Recovery (Terminal), com o disco do sistema montado em /Volumes/<NOME>:
+   - voltar so a versao anterior do kext (colecao de antes desta atualizacao):
+       cp -p "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc.maxwell-prev" \
+             "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc"
+   - ou tirar o MaxwellMetal de vez (colecao de antes de tudo):
+       rm -rf "/Volumes/<NOME>/Library/Extensions/MaxwellMetal.kext"
+       cp -p "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc.maxwell-backup" \
+             "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc"
+   e reinicie.
+3. Ultimo recurso: o clone do sistema.
+
+EXPERIMENTO sem o GeForceWeb (exp_sem_geforce.sh):
+- Voltar, com o sistema de pe:   sudo ~/maxwell_metal/kext/deploy/exp_restaura_geforce.sh   e reiniciar
+  (se a tela nao subir, faca isso por ssh a partir do MacBook: ssh no hackintosh e o mesmo comando).
+- Pelo Recovery (Terminal):
+    cp -p "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc.pre-semgeforce" \
+          "/Volumes/<NOME>/Library/KernelCollections/AuxiliaryKernelExtensions.kc"
+  e reinicie.

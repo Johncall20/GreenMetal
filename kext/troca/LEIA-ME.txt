@@ -1,0 +1,29 @@
+TROCA: tirar o Non-Metal (OCLP) e o GeForceWeb, e subir o macOS com o acelerador nosso (MaxwellAccel) + Metal NVK.
+
+Antes de tudo: o CLONE do sistema pronto e testado (da boot). Pendrive com a EFI atual.
+
+1) sudo ~/maxwell_metal/kext/troca/1_preparar.sh
+   Seguro: monta o snapshot original da Apple so para leitura e gera a AuxKC nova em
+   AuxiliaryKernelExtensions.kc.troca, guarda a AuxKC atual (.pre-troca) e um tar dos kexts da NVIDIA.
+   Nada que o boot usa muda. Me mande a saida.
+
+2) sudo ~/maxwell_metal/kext/troca/2_trocar.sh        (pede para digitar TROCAR)
+   Desliga o auto-patch do OCLP, apaga useMetal/useIOP=NO do CoreDisplay, libera o WindowServer na lista do
+   plugin (so com o acelerador armado), volta o sistema ao snapshot selado original e publica a AuxKC nova.
+
+3) config.plist do OpenCore: boot-args += "nvaccel=1 nvaccelarm=1"   (voce edita na EFI)
+   nvaccel=1    o acelerador sobe (sem ele: nao sobe, e o WindowServer fica sem Metal)
+   nvaccelarm=1 ele se arma sozinho no boot (sem ele: sudo sysctl -w debug.nvaccelfb=1 e logout)
+
+4) Reiniciar. Depois:  ~/maxwell_metal/kext/troca/3_conferir.sh   (tambem por ssh, se a tela ficar preta)
+
+VOLTA (Non-Metal como hoje): sudo ~/maxwell_metal/kext/troca/9_voltar.sh   e reiniciar
+   Funciona por ssh do MacBook com a tela preta. Reaplica os patches do OCLP (OpenCore-Patcher --patch_sys_vol).
+   Ultimo recurso: o clone.
+
+O que pode dar errado e o sinal de cada um (3_conferir.sh mostra):
+  - AuxKC recusada no boot: nenhum kext NVDA/Maxwell carregado, tela do firmware ou preta -> 9_voltar.sh
+  - acelerador nao sobe: "NVAccel: 0" -> log do MaxwellAccel; o WindowServer reinicia em loop sem Metal
+  - WindowServer recusa o plugin (assinatura/AMFI): log do plugin em /tmp/nvmtl.log -> talvez boot-arg
+    amfi_get_out_of_my_way=0x1
+  - tela preta com o WindowServer rodando: flip/scanout -> log do MaxwellMetal/backend

@@ -1,0 +1,26 @@
+# Lista de processos que ganham o MTLDevice da GTX 960 depois da troca (sem Non-Metal, acelerador MaxwellAccel).
+# "-nome" nega, "nome" libera, "!nome" libera so com o acelerador armado (sysctl debug.nvaccelfb = 1), "*" = todos.
+# Primeira regra que casa vence. O WindowServer precisa do Metal no Tahoe: ele e os processos de interface vem armados.
+!WindowServer
+!loginwindow
+!Dock
+!Finder
+!SystemUIServer
+!ControlCenter
+!NotificationCenter
+!com.apple.WebKit.GPU
+mtlprobe
+nvmtltest
+nvmtlrender
+Google Chrome Helper (Aperitif)
+Google Chrome Helper (GPU)
+# Papel de parede: com Metal o WallpaperImageExtension fica em 100% de CPU recriando o pipeline VTMTSComputeFunction1x1
+# (conversao de pixels do VideoToolbox) e o fundo nunca e entregue (2026-11-11). Sem Metal ele desenha pela CPU.
+-WallpaperImageExtension
+-WallpaperAerialsExtension
+-WallpaperLegacyExtension
+-NeptuneOneWallpaper
+-Wallpaper
+-WallpaperAgent
+-wallpaperexportd
+!*

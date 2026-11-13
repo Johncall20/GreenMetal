@@ -1,0 +1,23 @@
+# Lista de processos que ganham o MTLDevice da GTX 960 (plugin NVMTLDriver). Nome = getprogname() (executavel).
+# "-nome" nega, "nome" libera, "*" libera todos (NAO usar: pega o WindowServer). Primeira regra que casa vence.
+# So vale com o Metal armado: sudo sysctl -w debug.maxwell_metal=1
+
+# processos do sistema: nunca (o WindowServer compoe por CPU; se pegar a GPU e falhar, a tela cai)
+-WindowServer
+-loginwindow
+-Dock
+-Finder
+-SystemUIServer
+-ControlCenter
+-NotificationCenter
+-com.apple.WebKit.GPU
+
+# testes nossos (ja liberados pelo plugin, aqui so para constar)
+mtlprobe
+nvmtltest
+nvmtlrender
+
+# Chrome 157+: o processo de GPU roda como "Google Chrome Helper (Aperitif)" (ANGLE sobre Metal).
+# Abrir com ./chrome_metal.sh (sandbox de GPU desligada). O navegador em si ("Google Chrome") nao precisa.
+Google Chrome Helper (Aperitif)
+Google Chrome Helper (GPU)

@@ -1,0 +1,98 @@
+NVOS21_PARAMETERS                            size   32
+  hRoot                                      @0x000 (4)
+  hObjectParent                              @0x004 (4)
+  hObjectNew                                 @0x008 (4)
+  hClass                                     @0x00c (4)
+  pAllocParms                                @0x010 (8)
+  paramsSize                                 @0x018 (4)
+  status                                     @0x01c (4)
+NVOS64_PARAMETERS                            size   48
+NVOS00_PARAMETERS                            size   16
+  status                                     @0x00c (4)
+NVOS54_PARAMETERS                            size   32
+  hClient                                    @0x000 (4)
+  hObject                                    @0x004 (4)
+  cmd                                        @0x008 (4)
+  flags                                      @0x00c (4)
+  params                                     @0x010 (8)
+  paramsSize                                 @0x018 (4)
+  status                                     @0x01c (4)
+NVOS02_PARAMETERS                            size   48
+  flags                                      @0x010 (4)
+  pMemory                                    @0x018 (8)
+  limit                                      @0x020 (8)
+  status                                     @0x028 (4)
+nv_ioctl_nvos02_parameters_with_fd           size   56
+NVOS33_PARAMETERS                            size   48
+  hClient                                    @0x000 (4)
+  hDevice                                    @0x004 (4)
+  hMemory                                    @0x008 (4)
+  offset                                     @0x010 (8)
+  length                                     @0x018 (8)
+  pLinearAddress                             @0x020 (8)
+  status                                     @0x028 (4)
+  flags                                      @0x02c (4)
+nv_ioctl_nvos33_parameters_with_fd           size   56
+NVOS34_PARAMETERS                            size   32
+NVOS46_PARAMETERS                            size   64
+  hClient                                    @0x000 (4)
+  hDevice                                    @0x004 (4)
+  hDma                                       @0x008 (4)
+  hMemory                                    @0x00c (4)
+  offset                                     @0x010 (8)
+  length                                     @0x018 (8)
+  flags                                      @0x020 (4)
+  dmaOffset                                  @0x030 (8)
+  status                                     @0x038 (4)
+NVOS47_PARAMETERS                            size   48
+NVOS55_PARAMETERS                            size   28
+NVOS32_PARAMETERS                            size  184
+NV_MEMORY_ALLOCATION_PARAMS                  size  128
+  owner                                      @0x000 (4)
+  type                                       @0x004 (4)
+  flags                                      @0x008 (4)
+  attr                                       @0x018 (4)
+  attr2                                      @0x01c (4)
+  size                                       @0x040 (8)
+  alignment                                  @0x048 (8)
+  offset                                     @0x050 (8)
+  limit                                      @0x058 (8)
+  address                                    @0x060 (8)
+NV_CONTEXT_DMA_ALLOCATION_PARAMS             size   32
+NV0080_ALLOC_PARAMETERS                      size   56
+  deviceId                                   @0x000 (4)
+  hClientShare                               @0x004 (4)
+  flags                                      @0x010 (4)
+  vaSpaceSize                                @0x018 (8)
+  vaMode                                     @0x030 (4)
+NV2080_ALLOC_PARAMETERS                      size    4
+NV_VASPACE_ALLOCATION_PARAMETERS             size   56
+  index                                      @0x000 (4)
+  flags                                      @0x004 (4)
+  vaSize                                     @0x008 (8)
+  vaBase                                     @0x028 (8)
+  bigPageSize                                @0x020 (4)
+NV_CHANNEL_GROUP_ALLOCATION_PARAMETERS       size   28
+NV_CHANNEL_ALLOC_PARAMS                      size  376
+  hObjectError                               @0x000 (4)
+  hObjectBuffer                              @0x004 (4)
+  gpFifoOffset                               @0x008 (8)
+  gpFifoEntries                              @0x010 (4)
+  flags                                      @0x014 (4)
+  hContextShare                              @0x018 (4)
+  hVASpace                                   @0x01c (4)
+  hUserdMemory                               @0x024 (32)
+  userdOffset                                @0x048 (64)
+  engineType                                 @0x088 (4)
+  cid                                        @0x08c (4)
+  subDeviceId                                @0x090 (4)
+  hObjectEccError                            @0x094 (4)
+  instanceMem                                @0x098 (24)
+  internalFlags                              @0x0fc (4)
+Nvb06FControl                                size  512
+  Put                                        @0x040 (4)
+  Get                                        @0x044 (4)
+  Reference                                  @0x048 (4)
+  TopLevelGet                                @0x058 (4)
+  GPGet                                      @0x088 (4)
+  GPPut                                      @0x08c (4)

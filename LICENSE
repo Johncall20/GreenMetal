@@ -1,0 +1,36 @@
+GreenMetal: licence map
+=======================
+
+This repository mixes original work with work derived from other projects, so no single licence covers all of it.
+Each file is under the licence of the directory it is in, unless the file itself says otherwise (an SPDX line or a
+copyright header in a file always wins).
+
+PolyForm Noncommercial License 1.0.0      LICENSES/PolyForm-Noncommercial-1.0.0.md
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+    accel/                 derived from NullMoth's NVAccel (Copyright (c) 2026 NullMoth Systems), with changes
+    agdc/                  derived from NullMoth's NVRMAGDC (Copyright (c) 2026 NullMoth Systems), with changes
+    metal/plugin-lib/      NullMoth's Metal plugin (Copyright (c) 2026 NullMoth Systems), with changes
+    metal/ (the rest)      original
+    kext/                  original
+    fb/                    original
+    docs/                  original
+    README*, CONTRIBUTING.md, NOTICE.md
+
+MIT License                               LICENSES/MIT.txt
+
+    libnvrm387/            original
+    nvrm_r387.h            original
+    tools/                 original
+    nvk/                   original, except that nvk/patches/0002-nvk-maxwell-r387.patch also adds three class
+                           headers that are Copyright (c) NVIDIA CORPORATION under the MIT licence printed in
+                           each of them
+
+"Original" means written for this project: Copyright (c) 2026 The GreenMetal authors.
+
+Noncommercial means what it says. You may use, study, change and share this for any noncommercial purpose. You may
+not sell it or build a commercial product on the parts under the PolyForm licence. The upstream licence of the
+NullMoth-derived parts cannot be changed by this project.
+
+Nothing here grants any right to NVIDIA's or Apple's software. None of it is included.
+See NOTICE.md for the origin of each third-party part.
