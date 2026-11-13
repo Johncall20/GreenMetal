@@ -1,5 +1,13 @@
 # GreenMetal
 
+<p>
+  <img alt="Estado: experimental" src="https://img.shields.io/badge/estado-experimental-orange">
+  <img alt="macOS 26 Tahoe" src="https://img.shields.io/badge/macOS-26%20Tahoe-black?logo=apple">
+  <img alt="GPU: NVIDIA Maxwell" src="https://img.shields.io/badge/GPU-NVIDIA%20Maxwell-76B900?logo=nvidia&logoColor=white">
+  <img alt="Licença: PolyForm Noncommercial e MIT" src="https://img.shields.io/badge/licen%C3%A7a-PolyForm%20NC%20%2B%20MIT-blue">
+  <a href="#onde-preciso-de-ajuda"><img alt="Procuro ajuda" src="https://img.shields.io/badge/procuro-ajuda-brightgreen"></a>
+</p>
+
 **Metal em placas NVIDIA Maxwell no macOS 26 Tahoe, para hackintosh.** Uma pilha de driver aberta e experimental que dá a uma GTX 960 um
 dispositivo Metal funcionando, e a área de trabalho composta por Metal, num sistema que abandonou a NVIDIA há anos.
 

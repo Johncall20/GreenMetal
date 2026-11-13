@@ -1,0 +1,42 @@
+name: Bug / Erro
+description: Something that works on the reference machine (GTX 960) and breaks, or a wrong result. / Algo que funciona na máquina de referência e quebra, ou um resultado errado.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in English or Portuguese.
+        **Before you paste anything:** remove serial numbers and machine identifiers. Do not attach NVIDIA or Apple binaries.
+  - type: input
+    id: card
+    attributes:
+      label: Card and macOS build / Placa e build do macOS
+      placeholder: "GTX 960 2 GB, 26.7.2 (25G332)"
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: GreenMetal commit and kext versions / Commit e versões dos kexts
+      placeholder: "46b2e23; MaxwellAccel 0.4.6, MaxwellMetal 0.7.6, MaxwellFB 0.2.2, MaxwellAGDC 0.4.2"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps / Passos
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual / Esperado e obtido
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`sysctl debug | grep -E 'nvaccel|mx'`, the plugin log (`NVMTL_LOG_PATH`), `NVRM387_LOG=1`, or the panic report. Trim identifiers."
+      render: text

@@ -5,6 +5,7 @@
 # 1) raiz: so estes arquivos e pastas
 /*
 !/.gitignore
+!/.github/
 !/README.md
 !/README.pt-BR.md
 !/CONTRIBUTING.md
@@ -23,6 +24,7 @@
 !/tools/
 
 # 2) dentro das pastas liberadas: ignora tudo, mantem os diretorios...
+/.github/**
 /docs/**
 /accel/**
 /agdc/**
@@ -32,6 +34,7 @@
 /metal/**
 /nvk/**
 /tools/**
+!/.github/**/
 !/docs/**/
 !/accel/**/
 !/agdc/**/
@@ -60,6 +63,7 @@
 !*.vert
 !*.frag
 !*.png
+!*.yml
 !Makefile
 
 # 4) o que continua fora mesmo com a extensao liberada

@@ -1,0 +1,66 @@
+name: Card report / Relato de placa
+description: You tried GreenMetal on a card and want to say how far it got. Reports where nothing worked are welcome. / Você testou numa placa e quer contar até onde foi.
+title: "[card] "
+labels: ["help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Write in English or Portuguese.
+        **Before you paste anything:** remove serial numbers and machine identifiers from `ioreg` output, panic reports and EDID dumps. Do not attach NVIDIA or Apple binaries.
+  - type: input
+    id: card
+    attributes:
+      label: Card and PCI ID / Placa e PCI ID
+      placeholder: "GTX 970, 10de:13c2"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and build / Versão e build do macOS
+      placeholder: "26.7.2 (25G332)"
+    validations:
+      required: true
+  - type: input
+    id: webdriver
+    attributes:
+      label: NVIDIA Web Driver package / Pacote do Web Driver
+      placeholder: "387.10.10.10.40.140"
+    validations:
+      required: true
+  - type: textarea
+    id: bootargs
+    attributes:
+      label: boot-args and third-party kexts / boot-args e kexts de terceiros
+      description: Include the versions of Lilu, WhateverGreen and AMFIPass, and of the GreenMetal kexts (`kmutil showloaded | grep -i maxwell`).
+      render: text
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: How far did it get? / Até onde foi?
+      options:
+        - "Did not build / Não compilou"
+        - "libnvrm387 hardware test fails / O teste de hardware da libnvrm387 falha"
+        - "GPU runs commands, NVK does not create a device / A GPU executa, o NVK não cria o device"
+        - "Vulkan tests pass / Os testes de Vulkan passam"
+        - "Metal device visible to apps / Dispositivo Metal visível para os apps"
+        - "Desktop on the GreenMetal framebuffer / Área de trabalho no framebuffer do GreenMetal"
+        - "WindowServer on Metal / WindowServer no Metal"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What you ran and what happened / O que você rodou e o que aconteceu
+      description: Commands, output, and the `NVRM387_LOG=1` log if the failure is below Metal.
+    validations:
+      required: true
+  - type: textarea
+    id: panic
+    attributes:
+      label: Panic report, if any / Relatório de panic, se houve
+      description: With `keepsyms=1 debug=0x100` in boot-args. Trim identifiers.
+      render: text

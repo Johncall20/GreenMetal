@@ -1,5 +1,13 @@
 # GreenMetal
 
+<p>
+  <img alt="Status: experimental" src="https://img.shields.io/badge/status-experimental-orange">
+  <img alt="macOS 26 Tahoe" src="https://img.shields.io/badge/macOS-26%20Tahoe-black?logo=apple">
+  <img alt="GPU: NVIDIA Maxwell" src="https://img.shields.io/badge/GPU-NVIDIA%20Maxwell-76B900?logo=nvidia&logoColor=white">
+  <img alt="Licence: PolyForm Noncommercial and MIT" src="https://img.shields.io/badge/licence-PolyForm%20NC%20%2B%20MIT-blue">
+  <a href="#help-wanted"><img alt="Help wanted" src="https://img.shields.io/badge/help-wanted-brightgreen"></a>
+</p>
+
 **Metal on NVIDIA Maxwell cards under macOS 26 Tahoe, for hackintoshes.** An experimental, open driver stack that gives a GTX 960 a working
 Metal device, and a Metal-composited desktop, on an OS that dropped NVIDIA years ago.
 

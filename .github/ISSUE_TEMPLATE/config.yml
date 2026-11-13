@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: NullMoth NVIDIA driver (Turing and newer cards)
+    url: https://github.com/nullmoth/nvidia-macos-driver
+    about: GreenMetal only covers Maxwell cards on the NVIDIA Web Driver. For GTX 16xx, RTX and newer, this is the project you want.
