@@ -61,10 +61,13 @@ No file in this archive comes from NVIDIA's Web Driver or from Apple. The Web Dr
 you supply it yourself.
 EOF
 
+# Raw byte count: strings(1) does not look inside the symbol string table, where the debug map keeps object paths.
+homes() { perl -0777 -ne 'my $c = () = m{/Users/[^x/]}g; print $c' "$1"; }
+
 echo "== scrub home-directory paths recorded by the compiler"
 find "$S" -type f | while IFS= read -r f; do
   file -b "$f" | grep -q 'Mach-O' || continue
-  n=$(strings -a "$f" | grep -c '/Users/' || true)
+  n=$(homes "$f")
   [ "$n" -gt 0 ] || continue
   case "$f" in *.kext/*) die "a kext carries a /Users/ path ($f); rebuild it from a neutral path instead of patching";; esac
   perl -pi -e 's{/Users/([A-Za-z0-9._-]+)/}{"/Users/" . ("x" x length($1)) . "/"}ge' "$f"
@@ -79,7 +82,7 @@ while IFS= read -r f; do
   a=$(lipo -archs "$f" 2>/dev/null)
   [ "$a" = x86_64 ] || { echo "   not x86_64 ($a): $f"; bad=1; }
   codesign -v "$f" 2>/dev/null || { echo "   bad signature: $f"; bad=1; }
-  h=$(strings -a "$f" | grep -cE '/Users/[^x/]' || true)
+  h=$(homes "$f")
   [ "$h" -eq 0 ] || { echo "   home-directory path left: $f"; bad=1; }
 done < <(find "$S" -type f)
 codesign -v "$S/kext/gpubundles/NVMTLDriver.bundle" 2>/dev/null || { echo "   bad bundle signature"; bad=1; }
@@ -92,9 +95,10 @@ find "$S" \( -name '.DS_Store' -o -name '._*' \) -delete
 echo "   all Mach-O files are x86_64, signed, and free of home-directory paths; no NVIDIA or Apple bundle"
 
 echo "== pack"
-( cd "$O" && COPYFILE_DISABLE=1 tar czf "$N.tar.gz" "$N" )
+OWNER="--uid 0 --gid 0 --uname root --gname wheel"   # do not record the build user in the archive
+( cd "$O" && COPYFILE_DISABLE=1 tar czf "$N.tar.gz" $OWNER "$N" )
 if [ -d metal/translator-src ]; then
-  COPYFILE_DISABLE=1 tar czf "$O/nvmtl-translator-source.tar.gz" --exclude target --exclude .DS_Store -C metal translator-src
+  COPYFILE_DISABLE=1 tar czf "$O/nvmtl-translator-source.tar.gz" $OWNER --exclude target --exclude .DS_Store -C metal translator-src
 fi
 ( cd "$O" && shasum -a 256 "$N.tar.gz" nvmtl-translator-source.tar.gz 2>/dev/null > SHA256SUMS.txt && cat SHA256SUMS.txt )
 ls -la "$O"/*.tar.gz
