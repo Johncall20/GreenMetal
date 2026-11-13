@@ -24,7 +24,8 @@ GreenMetal $VERSION  -  experimental Metal for NVIDIA Maxwell on macOS 26
 
   ./greenmetal check          read-only look at this machine (no root)
   ./greenmetal status         what is installed, loaded and armed (no root)
-  ./greenmetal dry-run        build the new kernel collection in a temporary file and compare; changes nothing (no root)
+  ./greenmetal dry-run        check that the kexts here resolve against this system (no root)
+  sudo ./greenmetal dry-run   also build a trial kernel collection in a temporary folder; publishes nothing
 
   sudo ./greenmetal install        stage one: Metal for apps. Keeps your current desktop.
   sudo ./greenmetal switch         stage two: replace NVIDIA's accelerator. Can leave you without a picture.
@@ -145,47 +146,70 @@ cmd_status() {
   say "boot-args: $(nvram boot-args 2>/dev/null | cut -f2-)"
 }
 
-# Builds the collection the next install/update would publish, into a temporary file, and compares it with the
-# current one. Proves that the kexts in this folder link against this system. Publishes nothing.
+# Two levels. Without root: asks kmutil to resolve the dependencies of each kext in this folder against this system.
+# With root: also builds the collection the next install/update would publish, in a temporary root-owned folder
+# (kmutil silently drops kexts that are not owned by root), and checks that our kexts are really in it.
+# Publishes nothing either way.
 cmd_dry_run() {
   need_macos; need_payload
-  local st T rc id ver path new old KARG P
+  local st k out fail=0 W rc id ver path old new KARG P want
   st=$(state)
   [ $st != none ] || die "no Web Driver resource manager in the current collection; nothing to build on"
-  T=$(mktemp -d /tmp/greenmetal-dry.XXXXXX)
+  say "state: $st"
+  say ""; say "== 1. dependencies of the kexts in this folder"
+  for k in $PAYLOAD_KEXTS; do
+    out=$(kmutil print-diagnostics -p "$ROOT/$k" 2>&1)
+    if printf '%s\n' "$out" | grep -q '^Dependencies: OK'; then say "   ok    $(basename "$k") $(plist_ver "$ROOT/$k")"
+    else
+      say "   FAIL  $(basename "$k") $(plist_ver "$ROOT/$k")"
+      printf '%s\n' "$out" | grep -vE '^No variant|Invalid ownership|^Diagnosing|Bad code signature|^Error:' | sed 's/^/         /' | head -12
+      # before stage two the system still has the patched graphics family, so only MaxwellMetal has to resolve
+      if [ $st = switched ] || [ "$(basename "$k")" = MaxwellMetal.kext ]; then fail=1; fi
+    fi
+  done
+  [ $fail = 0 ] || die "a kext in this folder does not resolve against this system. Do NOT install here as it is."
+  if [ "$(id -u)" -ne 0 ]; then
+    say ""; say "dependencies ok. For the full test (a trial kernel collection, still publishing nothing):  sudo ./greenmetal dry-run"
+    return 0
+  fi
+
+  say ""; say "== 2. trial collection (about a minute)"
+  [ $st = switched ] || say "   (the stage-one collection; the stage-two one is built against the sealed snapshot by 'switch' itself, which stops before publishing if it fails)"
+  W=$(mktemp -d /private/var/tmp/greenmetal-dry.XXXXXX)
+  want="local.maxwell.MaxwellMetal"; ditto "$DEPLOY/MaxwellMetal.kext" "$W/MaxwellMetal.kext"
+  if [ $st = switched ]; then
+    for k in MaxwellAccel MaxwellAGDC MaxwellFB; do ditto "$TROCA/$k.kext" "$W/$k.kext"; want="$want local.maxwell.$k"; done
+  fi
+  chown -R root:wheel "$W" && chmod -R go-w "$W"
   P=()
   while IFS=$'\t' read -r id ver path; do
-    case "$id" in
-      local.maxwell.MaxwellMetal) continue;;
-      local.maxwell.MaxwellAccel|local.maxwell.MaxwellAGDC|local.maxwell.MaxwellFB) continue;;
-    esac
-    [ -d "$path" ] || { rm -rf "$T"; die "a kext of the current collection is gone from disk: $id ($path)"; }
+    case "$id" in local.maxwell.*) continue;; esac
+    [ -d "$path" ] || { rm -rf "$W"; die "a kext of the current collection is gone from disk: $id ($path)"; }
     P+=(-p "$path")
   done < <(kc_rows "$KC")
-  P+=(-p "$DEPLOY/MaxwellMetal.kext")
-  if [ $st = switched ]; then P+=(-p "$TROCA/MaxwellAccel.kext" -p "$TROCA/MaxwellAGDC.kext" -p "$TROCA/MaxwellFB.kext"); fi
-  say "state: $st. Building a trial collection with the kexts from this folder (about a minute)..."
-  [ $st = switched ] || say "(this is the stage-one collection; the stage-two one needs root to read the sealed snapshot and is not tried here)"
+  for k in "$W"/*.kext; do P+=(-p "$k"); done
   KARG=(--allow-missing-kdk); [ -f /System/Library/Kernels/kernel ] && KARG+=(--kernel /System/Library/Kernels/kernel)
   kmutil create -n aux --volume-root / "${KARG[@]}" -B /System/Library/KernelCollections/BootKernelExtensions.kc \
-    -S /System/Library/KernelCollections/SystemKernelExtensions.kc "${P[@]}" -x -A "$T/aux.kc" -z > "$T/kmutil.log" 2>&1
+    -S /System/Library/KernelCollections/SystemKernelExtensions.kc "${P[@]}" -x -A "$W/aux.kc" -z > "$W/kmutil.log" 2>&1
   rc=$?
-  if [ $rc -ne 0 ] || [ ! -s "$T/aux.kc" ]; then
-    grep -v '^No variant' "$T/kmutil.log" | tail -25
-    rm -rf "$T"; die "kmutil could not build the collection (rc $rc). Do NOT install on this machine as it is."
+  if [ $rc -ne 0 ] || [ ! -s "$W/aux.kc" ]; then
+    grep -v '^No variant' "$W/kmutil.log" | tail -25
+    rm -rf "$W"; die "kmutil could not build the collection (rc $rc). Do NOT install on this machine as it is."
   fi
-  kc_rows "$T/aux.kc" | cut -f1,2 | sort > "$T/new.txt"; kc_rows "$KC" | cut -f1,2 | sort > "$T/old.txt"
-  say ""; say "trial collection: $(grep -c . "$T/new.txt") kexts"
-  sed 's/^/   /' "$T/new.txt" | tr '\t' ' '
-  old=$(comm -23 "$T/old.txt" "$T/new.txt"); new=$(comm -13 "$T/old.txt" "$T/new.txt")
+  kc_rows "$W/aux.kc" | cut -f1,2 | sort > "$W/new.txt"; kc_rows "$KC" | cut -f1,2 | sort > "$W/old.txt"
+  sed 's/^/   /' "$W/new.txt" | tr '\t' ' '
+  for id in $want; do
+    cut -f1 "$W/new.txt" | grep -qx "$id" || { rm -rf "$W"; die "kmutil built a collection WITHOUT $id. Do NOT install on this machine as it is."; }
+  done
+  old=$(comm -23 "$W/old.txt" "$W/new.txt"); new=$(comm -13 "$W/old.txt" "$W/new.txt")
   say ""
   if [ -z "$old$new" ]; then say "same kexts and versions as the collection in use."
   else
     [ -n "$old" ] && { say "only in the collection in use:"; printf '%s\n' "$old" | sed 's/^/   /' | tr '\t' ' '; }
     [ -n "$new" ] && { say "only in the trial collection:";  printf '%s\n' "$new" | sed 's/^/   /' | tr '\t' ' '; }
   fi
-  rm -rf "$T"
-  say ""; say "dry run ok: the kexts in this folder link against this system. Nothing was changed."
+  rm -rf "$W"
+  say ""; say "dry run ok: the collection builds with the kexts from this folder. Nothing was changed."
 }
 
 # ---- commands that change the machine -----------------------------------------------------------------------------
