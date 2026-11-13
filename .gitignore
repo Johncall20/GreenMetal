@@ -65,6 +65,7 @@
 !*.png
 !*.yml
 !Makefile
+!/.github/CODEOWNERS
 
 # 4) o que continua fora mesmo com a extensao liberada
 /CLAUDE.md

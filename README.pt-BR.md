@@ -140,11 +140,14 @@ Este repositório **não tem nenhum binário da NVIDIA nem da Apple**. Você tra
   usadas sem alteração: o patch do NVK para macOS e o tradutor de shaders.
 - Uma segunda máquina com acesso por `ssh` à máquina de teste. Você vai precisar na primeira vez que a tela ficar preta.
 
-## Como compilar
+## Como compilar e instalar
 
-Cada kext tem um `build.sh` ao lado dos fontes. O [`nvk/README.md`](nvk/README.md) cobre o NVK, e o
-`metal/build_plugin.sh` compila o plugin Metal. Ainda não existe um build único para tudo. É uma das coisas em que
-preciso de ajuda.
+Comece pela checagem, `tools/greenmetal-check.sh`, que só lê e diz o quanto uma máquina está perto.
+
+O [`docs/INSTALL.pt-BR.md`](docs/INSTALL.pt-BR.md) mostra o procedimento inteiro como o autor faz: compilar, arrumar os
+binários, instalar, trocar e voltar. Cada kext tem um `build.sh` ao lado dos fontes, o [`nvk/README.md`](nvk/README.md)
+cobre o NVK, e o `metal/build_plugin.sh` compila o plugin Metal. Ainda não existe build único nem instalador. É uma das
+coisas em que preciso de ajuda.
 
 ## Onde preciso de ajuda
 

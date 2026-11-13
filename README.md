@@ -138,11 +138,14 @@ This repository contains **no NVIDIA or Apple binaries**. You bring your own:
   unmodified: the NVK macOS patch and the shader translator.
 - A second machine with `ssh` access to the test machine. You will need it the first time the screen stays black.
 
-## Building
+## Building and installing
 
-Each kext has a `build.sh` next to its sources. [`nvk/README.md`](nvk/README.md) covers NVK, and
-`metal/build_plugin.sh` builds the Metal plugin. There is no top-level build yet. That is one of the things help is
-wanted for.
+Start with the read-only preflight, `tools/greenmetal-check.sh`, which tells you how close a machine is.
+
+[`docs/INSTALL.md`](docs/INSTALL.md) walks through the whole procedure as the author does it: build, stage, install, switch
+over and roll back. Each kext has a `build.sh` next to its sources, [`nvk/README.md`](nvk/README.md) covers NVK, and
+`metal/build_plugin.sh` builds the Metal plugin. There is no one-command build or installer yet. That is one of the
+things help is wanted for.
 
 ## Help wanted
 

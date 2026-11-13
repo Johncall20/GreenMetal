@@ -3,6 +3,24 @@
 Thank you for looking. This project has had one author and one test machine, so almost any outside input moves it
 forward. Issues and pull requests are welcome in English or Portuguese.
 
+## How a change gets in
+
+Nobody but the maintainer can write to this repository, so every change arrives as a pull request and is merged only
+after the maintainer has read it.
+
+1. Look at the [open issues](../../issues), especially the ones labelled `help wanted`. Comment on one before you
+   start anything large, so two people do not do the same work.
+2. Fork the repository and make your change on a branch in your fork.
+3. Open a pull request against `main`. The template asks what you tested and on which card.
+4. The maintainer reviews it, may ask for changes, and merges it. A pull request that cannot be tested on the
+   reference machine may wait until someone with the right card confirms it.
+
+No code yet? A [card report](../../issues/new/choose) is a contribution too.
+
+**Em português:** só o mantenedor escreve neste repositório. Toda mudança chega como pull request a partir de um fork e
+só entra depois que ele revisar e aprovar. Veja as [issues abertas](../../issues), comente na que quiser pegar, faça a
+mudança num branch do seu fork e abra o pull request contra `main`. Pode escrever em português.
+
 ## The most useful thing you can do
 
 Try it on a card that is not a GTX 960 and say where it stopped. A report is useful even when nothing works.
